@@ -3,11 +3,10 @@ import argparse
 import numpy as np
 from sklearn.pipeline import Pipeline
 from sklearn.datasets import load_files
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.decomposition import TruncatedSVD
-from sklearn.linear_model import LogisticRegression
+
 from sklearn.model_selection import StratifiedShuffleSplit, cross_validate
-import preprocess_data
+
+import preprocess_data, pipes_src
 
 def get_script_arguments():
 
@@ -23,24 +22,13 @@ def get_script_arguments():
 
     return script_args
 
-def get_script_path():
-    """
-    Get the absolute path of the script directory
-    
-    Returns:
-      The absolute path of the directory where the script is located.
-    """
-
-    script_path = os.path.dirname(os.path.realpath(__file__))
-    abs_path = '/'.join(script_path.split('/')[:-1])
-    return abs_path
 
 if __name__ == "__main__":
     
     # retrieving the script arguments
     script_args = get_script_arguments()
 
-    # Loading the data
+    ## Loading the data
     data_relative_path = script_args.data_relative_path
     data_path = os.path.join(os.getcwd(), data_relative_path)
 
@@ -48,9 +36,7 @@ if __name__ == "__main__":
         container_path=data_path,
         encoding='UTF-8',
         decode_error='replace') 
-    
-    
-   
+     
     # preprocessing the text (bbc_df.data is a list)
     bbc_df.data = preprocess_data.clean_text_for_tfidf(
         data=bbc_df.data,
@@ -60,40 +46,53 @@ if __name__ == "__main__":
         language='english'
     )
 
-    ## creating a preprocess pipeline
-    # tfidf
-    tfidf_vect = TfidfVectorizer(
-        ngram_range=(1,1),
-        max_df=0.95,
-        min_df=2
-    )
+    ## Creating a preprocess list for the Pipeline: contains a tfidf and an TruncatedSVD
+    preprocess_list = pipes_src.get_preprocess_list(
+        random_state=script_args.random_state)
+
+    print(f"Preprocess steps: {preprocess_list}")
     
-    # svd
-    svd_dec = TruncatedSVD(
-        n_components=1000,
-        n_iter=30,
-        random_state=script_args.random_state
-    )
-
-    lr = LogisticRegression()
-    preprocess_pipe = [
-        ('tfidf', tfidf_vect), ('svd', svd_dec), ('classifier', lr)]
-
-    # pipe
-    pipe = Pipeline(steps=preprocess_pipe)
-
-    # Cross validation
-    sss = StratifiedShuffleSplit(n_splits=5, test_size=0.2, random_state=script_args.random_state)
+    ## Getting the models pipeline list for the Pipeline
+    models_list = pipes_src.get_models_list(
+        random_state=script_args.random_state,
+        n_jobs=-1)
     
-    results = cross_validate(
-        estimator=pipe,
-        X=bbc_df.data,
-        y=bbc_df.target,
-        cv=sss,
-        n_jobs=-1,
-    )
+    print(f"Models List: {models_list}")  
 
-    print(results)
+    for model_tuple in models_list:
+        # name of the model
+        model_name = model_tuple[0]
+        print(f"\nStarting the cross-validation of the model {model_name}...")
+
+        final_list = preprocess_list.copy()
+        final_list.append(model_tuple)
+    
+        # pipe
+        pipe = Pipeline(steps=final_list)
+
+        # Cross validation
+        sss = StratifiedShuffleSplit(n_splits=5, test_size=0.2, random_state=script_args.random_state)
+        
+        # Initializing the cross-validation
+        results = cross_validate(
+            estimator=pipe,
+            X=bbc_df.data,
+            y=bbc_df.target,
+            cv=sss,
+            scoring=['balanced_accuracy', 'f1_macro', 'precision_macro', 'recall_macro'],
+            return_train_score=True,
+            n_jobs=-1,
+        )
+
+        print(f"{model_name} - CV Mean Balanced Accuracy: {np.mean(results['test_balanced_accuracy']):.3f}")
+        print(f"{model_name} - CV Mean Precision Macro: {np.mean(results['test_precision_macro']):.3f}")
+        print(f"{model_name} - CV Mean Recall Macro: {np.mean(results['test_recall_macro']):.3f}")
+        print(f"{model_name} - CV Mean F1 Macro: {np.mean(results['test_f1_macro']):.3f}")
+    
+    print("Finalizing the script...")
+
+
+    
 
 
 
