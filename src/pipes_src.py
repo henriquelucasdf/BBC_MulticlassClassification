@@ -1,10 +1,11 @@
+from lightgbm import LGBMClassifier
 from sklearn.decomposition import TruncatedSVD
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 
-from lightgbm import LGBMClassifier
+from preprocess_src import CustomTextPreprocessor
 
 
 def get_preprocess_list(random_state=1):
@@ -17,7 +18,14 @@ def get_preprocess_list(random_state=1):
     Returns:
       A list of tuples.
     """
-    
+    # text preprocessor
+    tp = CustomTextPreprocessor(
+        normalize=True,
+        remove_punct=True,
+        remove_stopwords=True,
+        language='english'
+    )
+    # TFIDF Vectorizer
     tfidf_vect = TfidfVectorizer(
         ngram_range=(1,1),
         max_df=0.95,
@@ -31,7 +39,7 @@ def get_preprocess_list(random_state=1):
         random_state=random_state
     )
 
-    return [('tfidf', tfidf_vect), ('svd', svd_dec)]
+    return [('text_proc', tp),('tfidf', tfidf_vect), ('svd', svd_dec)]
 
 def get_models_list(random_state=1, n_jobs=-1):
     """
@@ -61,9 +69,9 @@ def get_models_list(random_state=1, n_jobs=-1):
 
     # GB classifier
     lgb = LGBMClassifier(
-        learning_rate=0.01,
-        n_estimators=1000,
-        max_depth=7,
+        learning_rate=0.05,
+        n_estimators=500,
+        max_depth=5,
         random_state=random_state,
         n_jobs=n_jobs
     )

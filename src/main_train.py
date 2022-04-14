@@ -6,7 +6,9 @@ from sklearn.datasets import load_files
 
 from sklearn.model_selection import StratifiedShuffleSplit, cross_validate
 
-import preprocess_data, pipes_src
+import pipes_src
+
+
 
 def get_script_arguments():
 
@@ -37,16 +39,7 @@ if __name__ == "__main__":
         encoding='UTF-8',
         decode_error='replace') 
      
-    # preprocessing the text (bbc_df.data is a list)
-    bbc_df.data = preprocess_data.clean_text_for_tfidf(
-        data=bbc_df.data,
-        normalize=True,
-        remove_stopwords=True,
-        remove_punct=True,
-        language='english'
-    )
-
-    ## Creating a preprocess list for the Pipeline: contains a tfidf and an TruncatedSVD
+    ## Creating a preprocess list for the Pipeline: contains a text preprocessor, a tfidf and an TruncatedSVD
     preprocess_list = pipes_src.get_preprocess_list(
         random_state=script_args.random_state)
 
@@ -57,9 +50,11 @@ if __name__ == "__main__":
         random_state=script_args.random_state,
         n_jobs=-1)
     
+    #TODO: Tracking with MLFlow
     print(f"Models List: {models_list}")  
 
     for model_tuple in models_list:
+        
         # name of the model
         model_name = model_tuple[0]
         print(f"\nStarting the cross-validation of the model {model_name}...")
@@ -71,7 +66,7 @@ if __name__ == "__main__":
         pipe = Pipeline(steps=final_list)
 
         # Cross validation
-        sss = StratifiedShuffleSplit(n_splits=5, test_size=0.2, random_state=script_args.random_state)
+        sss = StratifiedShuffleSplit(n_splits=3, test_size=0.2, random_state=script_args.random_state)
         
         # Initializing the cross-validation
         results = cross_validate(
@@ -88,7 +83,7 @@ if __name__ == "__main__":
         print(f"{model_name} - CV Mean Precision Macro: {np.mean(results['test_precision_macro']):.3f}")
         print(f"{model_name} - CV Mean Recall Macro: {np.mean(results['test_recall_macro']):.3f}")
         print(f"{model_name} - CV Mean F1 Macro: {np.mean(results['test_f1_macro']):.3f}")
-    
+
     print("Finalizing the script...")
 
 
