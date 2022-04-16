@@ -110,18 +110,18 @@ class CustomTextPreprocessor(BaseEstimator, TransformerMixin):
         # lower case
         if lower:
             text = text.lower()
-        
+
         # tokenizing (to list)
         tokenized_text = word_tokenize(text, language=language)
 
         # stopwords (set)
         try:
             stop_ = set(stopwords.words(language))
-        except:
+        except Exception:
             # if error, download the language package
             nltk.download(language, quiet=True)
             stop_ = set(stopwords.words(language))
-            
+
         # removing stopwords
         stop_text = [word for word in tokenized_text if word not in stop_]
 

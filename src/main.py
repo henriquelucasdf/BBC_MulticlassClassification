@@ -96,7 +96,8 @@ if __name__ == "__main__":
 
     
     del pipe # deletes last pipeline
-    # After evaluating all models > Hiperparameters optimization of the best model
+
+    # Getting the best model accordingly to the selected metric
     best_model_tuple = utils.get_best_model(
         kpis_dict=models_kpis_dict,
         models_list=models_list,
@@ -126,14 +127,13 @@ if __name__ == "__main__":
     rs = RandomizedSearchCV(
         estimator=hyper_pipe,
         param_distributions=hyper_params,
-        n_iter=10,
-        n_jobs=-1,
+        n_iter=15,
         refit=True,
         cv=sss_hyper,
         verbose=script_args.verbose,
         scoring=script_args.best_model_metric,
         random_state=script_args.random_state
-    )
+    ) # Using n_jobs=-1 in RandomizedSearchCV causes memory leak. Use it on the models
 
     rs.fit(X=bbc_df.data, y=bbc_df.target)
 
@@ -146,7 +146,7 @@ if __name__ == "__main__":
     utils.save_models(
         estimator=rs.best_estimator_,
         name='best_pipeline',
-        folder='../models')
+        folder='models')
     
     logging.info("    Finalizing the script...")
 

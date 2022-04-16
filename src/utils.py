@@ -1,5 +1,6 @@
 import os
 import pytz
+import joblib
 import logging
 import argparse
 import numpy as np
@@ -21,11 +22,10 @@ def _get_script_arguments():
     parser.add_argument('--data_relative_path', type=str, default='data/')
     parser.add_argument('--random_state', type=int, default=1)
     parser.add_argument('--cv_splits', type=int, default=5)
+    parser.add_argument('--verbose', type=int, default=2)
+    parser.add_argument('--best_model_metric', type=str, default='balanced_accuracy')
 
-    # parsing
-    script_args = parser.parse_args()
-
-    return script_args
+    return parser.parse_args()
 
 
 def _get_datetime_as_string():
@@ -64,6 +64,7 @@ def _config_logging():
     # config the logging 
     logging.basicConfig(filename=filepath, level=logging.DEBUG)
 
+
 def get_best_model(kpis_dict, models_list, metric_for_eval='balanced_accuracy'):
     """
     It takes a dictionary of models and their metrics, and returns a tuple with the name  and the
@@ -94,3 +95,32 @@ def get_best_model(kpis_dict, models_list, metric_for_eval='balanced_accuracy'):
     logging.info(f"    Best model found: {best_model_tuple[0]}")
     
     return best_model_tuple
+
+
+def save_models(estimator, name, folder='models'):
+    """
+    It creates a folder (if it doesn't exist) and saves the model in a file with a name that includes
+    the current date and time
+    
+    Args:
+      estimator: the model to be saved
+      name: the name of the model
+      folder: the folder where the model will be saved. Defaults to 'models'
+    """
+
+    # create the folder
+    os.makedirs(os.path.join(os.getcwd(), folder), exist_ok=True)
+
+    # name of the model
+    est_name = f'{name}_{_get_datetime_as_string()}.pkl'
+    filepath = os.path.join(os.getcwd(), folder, est_name)
+    
+    # saving
+    try:
+        joblib.dump(estimator, filepath)
+        logging.info(f"    The model was saved in the filepath {filepath}")
+    
+    except Exception:
+        logging.error("Ops! Something went wront when trying to save the model")
+
+
