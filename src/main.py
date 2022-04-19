@@ -24,7 +24,8 @@ if __name__ == "__main__":
     logging.info(
         f"   A new run has started with the arguments: {script_args}")
 
-    ## Loading the data
+    ## 1. Preprocessing
+    # Loading the data
     data_relative_path = script_args.data_relative_path
     data_path = os.path.join(os.getcwd(), data_relative_path)
 
@@ -48,6 +49,7 @@ if __name__ == "__main__":
     logging.info(
         f"   The defined models to test are:   {models_list}")
 
+    ## 2. Model training
     # Cross validation of models
     sss = StratifiedShuffleSplit(
         n_splits=script_args.cv_splits,
@@ -104,7 +106,7 @@ if __name__ == "__main__":
         metric_for_eval=script_args.best_model_metric
     )
 
-    ## Hyperparameters optimization
+    ## 3. Hyperparameters optimization
     logging.info("    Starting the hyperparameters optimization...")
     
     # pipeline steps
@@ -141,7 +143,8 @@ if __name__ == "__main__":
     logging.info(f"    The best parameters found were: {rs.best_params_}")
     logging.info(f"    The best metric ({script_args.best_model_metric}) was: {rs.best_score_}")
 
-    # Saving the best estimator:
+    # 4. Post-processing
+    #  Saving the best estimator:
     logging.info("    Saving the best estimator on the folder 'models'...")
     utils.save_models(
         estimator=rs.best_estimator_,
